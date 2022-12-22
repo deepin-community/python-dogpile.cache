@@ -1,0 +1,28 @@
+#!/usr/bin/make -f
+
+UPSTREAM_GIT = https://github.com/sqlalchemy/dogpile.cache.git
+include /usr/share/openstack-pkg-tools/pkgos.make
+
+%:
+	dh $@ --buildsystem=python_distutils --with python3,sphinxdoc
+
+override_dh_auto_clean:
+	rm -rf build
+
+override_dh_auto_build:
+	echo "Do nothing..."
+
+override_dh_auto_install:
+	pkgos-dh_auto_install --no-py2
+
+override_dh_auto_test:
+ifeq (,$(findstring nocheck, $(DEB_BUILD_OPTIONS)))
+	PYTHONPATH=. python3 -m pytest
+endif
+
+override_dh_sphinxdoc:
+ifeq (,$(findstring nodoc, $(DEB_BUILD_OPTIONS)))
+	PYTHONPATH=. python3 -m sphinx -b html docs/build $(CURDIR)/debian/python-dogpile.cache-doc/usr/share/doc/python-dogpile.cache-doc/html
+	dh_sphinxdoc
+	rm $(CURDIR)/debian/python-dogpile.cache-doc/usr/share/doc/python-dogpile.cache-doc/html/_static/site_custom_css.css
+endif
