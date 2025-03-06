@@ -1,3 +1,5 @@
+# mypy: ignore-errors
+
 import collections
 import itertools
 import json
@@ -5,7 +7,6 @@ import random
 from threading import Lock
 from threading import Thread
 import time
-from unittest import TestCase
 import uuid
 
 import pytest
@@ -14,13 +15,18 @@ from dogpile.cache import CacheRegion
 from dogpile.cache import register_backend
 from dogpile.cache.api import CacheBackend
 from dogpile.cache.api import CacheMutex
+from dogpile.cache.api import CantDeserializeException
 from dogpile.cache.api import NO_VALUE
 from dogpile.cache.region import _backend_loader
-from . import assert_raises_message
-from . import eq_
+from .assertions import assert_raises_message
+from .assertions import eq_
 
 
-class _GenericBackendFixture(object):
+def gen_some_key():
+    return f"some_key_{random.randint(1, 100000)}"
+
+
+class _GenericBackendFixture:
     @classmethod
     def setup_class(cls):
         backend_cls = _backend_loader.load(cls.backend)
@@ -31,13 +37,14 @@ class _GenericBackendFixture(object):
             pytest.skip("Backend %s not installed" % cls.backend)
         cls._check_backend_available(backend)
 
-    def tearDown(self):
+    def teardown_method(self, method):
+        some_key = gen_some_key()
         if self._region_inst:
             for key in self._keys:
                 self._region_inst.delete(key)
             self._keys.clear()
         elif self._backend_inst:
-            self._backend_inst.delete("some_key")
+            self._backend_inst.delete(some_key)
 
     @classmethod
     def _check_backend_available(cls, backend):
@@ -90,25 +97,29 @@ class _GenericBackendFixture(object):
         return self._backend_inst
 
 
-class _GenericBackendTest(_GenericBackendFixture, TestCase):
+class _GenericBackendTestSuite(_GenericBackendFixture):
     def test_backend_get_nothing(self):
         backend = self._backend()
-        eq_(backend.get_serialized("some_key"), NO_VALUE)
+        some_key = gen_some_key()
+        eq_(backend.get_serialized(some_key), NO_VALUE)
 
     def test_backend_delete_nothing(self):
         backend = self._backend()
-        backend.delete("some_key")
+        some_key = gen_some_key()
+        backend.delete(some_key)
 
     def test_backend_set_get_value(self):
         backend = self._backend()
-        backend.set_serialized("some_key", b"some value")
-        eq_(backend.get_serialized("some_key"), b"some value")
+        some_key = gen_some_key()
+        backend.set_serialized(some_key, b"some value")
+        eq_(backend.get_serialized(some_key), b"some value")
 
     def test_backend_delete(self):
         backend = self._backend()
-        backend.set_serialized("some_key", b"some value")
-        backend.delete("some_key")
-        eq_(backend.get_serialized("some_key"), NO_VALUE)
+        some_key = gen_some_key()
+        backend.set_serialized(some_key, b"some value")
+        backend.delete(some_key)
+        eq_(backend.get_serialized(some_key), NO_VALUE)
 
     def test_region_is_key_locked(self):
         reg = self._region()
@@ -127,8 +138,9 @@ class _GenericBackendTest(_GenericBackendFixture, TestCase):
 
     def test_region_set_get_value(self):
         reg = self._region()
-        reg.set("some key", "some value")
-        eq_(reg.get("some key"), "some value")
+        some_key = gen_some_key()
+        reg.set(some_key, "some value")
+        eq_(reg.get(some_key), "some value")
 
     def test_region_set_multiple_values(self):
         reg = self._region()
@@ -201,8 +213,9 @@ class _GenericBackendTest(_GenericBackendFixture, TestCase):
 
     def test_region_set_get_nothing(self):
         reg = self._region()
-        reg.delete_multi(["some key"])
-        eq_(reg.get("some key"), NO_VALUE)
+        some_key = gen_some_key()
+        reg.delete_multi([some_key])
+        eq_(reg.get(some_key), NO_VALUE)
 
     def test_region_creator(self):
         reg = self._region()
@@ -210,7 +223,8 @@ class _GenericBackendTest(_GenericBackendFixture, TestCase):
         def creator():
             return "some value"
 
-        eq_(reg.get_or_create("some key", creator), "some value")
+        some_key = gen_some_key()
+        eq_(reg.get_or_create(some_key, creator), "some value")
 
     @pytest.mark.time_intensive
     def test_threaded_dogpile(self):
@@ -220,6 +234,7 @@ class _GenericBackendTest(_GenericBackendFixture, TestCase):
         reg = self._region(config_args={"expiration_time": 0.25})
         lock = Lock()
         canary = []
+        some_key = gen_some_key()
 
         def creator():
             ack = lock.acquire(False)
@@ -231,7 +246,7 @@ class _GenericBackendTest(_GenericBackendFixture, TestCase):
 
         def f():
             for x in range(5):
-                reg.get_or_create("some key", creator)
+                reg.get_or_create(some_key, creator)
                 time.sleep(0.5)
 
         threads = [Thread(target=f) for i in range(10)]
@@ -252,8 +267,9 @@ class _GenericBackendTest(_GenericBackendFixture, TestCase):
         With "distributed" locks, this is not 100% the case.
 
         """
+        some_key = gen_some_key()
         reg = self._region(config_args={"expiration_time": 0.25})
-        backend_mutex = reg.backend.get_mutex("some_key")
+        backend_mutex = reg.backend.get_mutex(some_key)
         is_custom_mutex = backend_mutex is not None
 
         locks = dict((str(i), Lock()) for i in range(11))
@@ -309,10 +325,11 @@ class _GenericBackendTest(_GenericBackendFixture, TestCase):
 
     def test_region_delete(self):
         reg = self._region()
-        reg.set("some key", "some value")
-        reg.delete("some key")
-        reg.delete("some key")
-        eq_(reg.get("some key"), NO_VALUE)
+        some_key = gen_some_key()
+        reg.set(some_key, "some value")
+        reg.delete(some_key)
+        reg.delete(some_key)
+        eq_(reg.get(some_key), NO_VALUE)
 
     @pytest.mark.time_intensive
     def test_region_expire(self):
@@ -323,6 +340,7 @@ class _GenericBackendTest(_GenericBackendFixture, TestCase):
         # with very slow processing missing a timeout, as is often the
         # case with this particular test
 
+        some_key = gen_some_key()
         expire_time = 1.00
 
         reg = self._region(config_args={"expiration_time": expire_time})
@@ -331,18 +349,18 @@ class _GenericBackendTest(_GenericBackendFixture, TestCase):
         def creator():
             return "some value %d" % next(counter)
 
-        eq_(reg.get_or_create("some key", creator), "some value 1")
+        eq_(reg.get_or_create(some_key, creator), "some value 1")
         time.sleep(expire_time + (0.2 * expire_time))
         # expiration is definitely hit
-        post_expiration = reg.get("some key", ignore_expiration=True)
+        post_expiration = reg.get(some_key, ignore_expiration=True)
         if post_expiration is not NO_VALUE:
             eq_(post_expiration, "some value 1")
 
-        eq_(reg.get_or_create("some key", creator), "some value 2")
+        eq_(reg.get_or_create(some_key, creator), "some value 2")
 
         # this line needs to run less the expire_time sec before the previous
         # two or it hits the expiration
-        eq_(reg.get("some key"), "some value 2")
+        eq_(reg.get(some_key), "some value 2")
 
     def test_decorated_fn_functionality(self):
         # test for any quirks in the fn decoration that interact
@@ -370,23 +388,41 @@ class _GenericBackendTest(_GenericBackendFixture, TestCase):
         eq_(my_function(4, 3), 11)
 
     def test_exploding_value_fn(self):
+        some_key = gen_some_key()
         reg = self._region()
 
         def boom():
             raise Exception("boom")
 
         assert_raises_message(
-            Exception, "boom", reg.get_or_create, "some_key", boom
+            Exception, "boom", reg.get_or_create, some_key, boom
         )
 
 
-class _GenericSerializerTest(TestCase):
+def raise_cant_deserialize_exception(v):
+    raise CantDeserializeException()
+
+
+class _GenericSerializerTestSuite:
     # Inheriting from this class will make test cases
     # use these serialization arguments
     region_args = {
         "serializer": lambda v: json.dumps(v).encode("ascii"),
         "deserializer": json.loads,
     }
+
+    def test_serializer_cant_deserialize(self):
+        region = self._region(
+            region_args={
+                "serializer": self.region_args["serializer"],
+                "deserializer": raise_cant_deserialize_exception,
+            }
+        )
+
+        value = {"foo": ["bar", 1, False, None]}
+        region.set("k", value)
+        asserted = region.get("k")
+        eq_(asserted, NO_VALUE)
 
     def test_uses_serializer(self):
         region = self._region()
@@ -417,7 +453,7 @@ class _GenericSerializerTest(TestCase):
     # TODO: test set_multi, get_multi
 
 
-class _GenericMutexTest(_GenericBackendFixture, TestCase):
+class _GenericMutexTestSuite(_GenericBackendFixture):
     def test_mutex(self):
         backend = self._backend()
         mutex = backend.get_mutex("foo")

@@ -3,6 +3,196 @@ Changelog
 =========
 
 .. changelog::
+    :version: 1.3.3
+    :released: Sun May 5 2024
+
+    .. change::
+        :tags: bug, typing
+
+        Fixed the return type for :meth:`.CacheRegion.get`, which was inadvertently
+        hardcoded to use ``CacheReturnType`` that only resolved to ``CachedValue``
+        or ``NoValue``.   Fixed to return ``ValuePayload`` which resolves to
+        ``Any``, as well as a new literal indicating an enum constant for
+        :data:`.api.NO_VALUE`.  The :data:`.api.NO_VALUE` constant remains
+        available as the single element of this enum.
+
+    .. change::
+        :tags: usecase, memcached
+
+        Added support for an additional pymemcached client parameter
+        :paramref:`.PyMemcacheBackend.memcached_expire_time`.  Pull request
+        courtesy Takashi Kajinami.
+
+.. changelog::
+    :version: 1.3.2
+    :released: Wed Feb 21 2024
+
+    .. change::
+        :tags: usecase, redis
+        :tickets: 250
+
+        Added a new backend :class:`.RedisClusterBackend`, allowing support for
+        Redis Cluster.  Pull request courtesy Maël Naccache Tüfekçi.
+
+
+    .. change::
+        :tags: usecase, redis
+        :tickets: 252
+
+        Added support for additional Redis client parameters
+        :paramref:`.RedisBackend.socket_connect_timeout`,
+        :paramref:`.RedisBackend.socket_keepalive` and
+        :paramref:`.RedisBackend.socket_keepalive_options`. Pull request courtesy
+        Takashi Kajinami.
+
+.. changelog::
+    :version: 1.3.1
+    :released: Wed Feb 7 2024
+
+    .. change::
+        :tags: usecase, redis
+
+        Added new parameter :paramref:`.RedisBackend.username` to the Redis
+        backend, and :paramref:`.RedisSentinelBackend.username` to the Redis
+        Sentinel backend.  These parameters allow for username authentication in
+        Redis when RBAC is enabled.   Pull request courtesy Takashi Kajinami.
+
+.. changelog::
+    :version: 1.3.0
+    :released: Wed Dec 20 2023
+
+    .. change::
+        :tags: feature, region
+        :tickets: 37
+
+        Added new method :meth:`.CacheRegion.get_value_metadata` which can be used
+        to get a value from the cache along with its metadata, including timestamp
+        of when the value was cached.  The :class:`.CachedValue` object is returned
+        which features new accessors to retrieve cached time and current age. Pull
+        request courtesy Grégoire Deveaux.
+
+
+
+    .. change::
+        :tags: change, setup
+
+        Minimum Python version is now Python 3.8; prior versions Python 3.7 and 3.6
+        are EOL.
+
+
+    .. change::
+        :tags: change, setup
+
+        Project setup is now based on pep-621 ``pyproject.toml`` configuration.
+
+.. changelog::
+    :version: 1.2.2
+    :released: Sat Jul 8 2023
+
+    .. change::
+        :tags: bug, typing
+        :tickets: 240
+
+        Made use of pep-673 ``Self`` type for method chained methods such as
+        :meth:`.CacheRegion.configure` and :meth:`.ProxyBackend.wrap`. Pull request
+        courtesy Viicos.
+
+.. changelog::
+    :version: 1.2.1
+    :released: Sat May 20 2023
+
+    .. change::
+        :tags: bug, typing
+        :tickets: 238
+
+        Added py.typed file to root so that typing tools such as Mypy recognize
+        dogpile as typed. Pull request courtesy Daverball.
+
+.. changelog::
+    :version: 1.2.0
+    :released: Wed Apr 26 2023
+
+    .. change::
+        :tags: feature, region
+        :tickets: 236
+
+        Added new construct :class:`.api.CantDeserializeException` which can be
+        raised by user-defined deserializer functions which would be passed to
+        :paramref:`.CacheRegion.deserializer`, to indicate a cache value that can't
+        be deserialized and therefore should be regenerated. This can allow an
+        application that's been updated to gracefully re-cache old items that were
+        persisted from a previous version of the application. Pull request courtesy
+        Simon Hewitt.
+
+.. changelog::
+    :version: 1.1.8
+    :released: Fri Jul 8 2022
+
+    .. change::
+        :tags: bug, memcached
+        :tickets: 223, 228
+
+        Moved the :paramref:`.MemcacheArgs.dead_retry` argument and the
+        :paramref:`.MemcacheArgs.socket_timeout` argument which were
+        erroneously added to the "set_parameters",
+        where they have no effect, to be part of the Memcached connection
+        arguments :paramref:`.MemcachedBackend.dead_retry`,
+        :paramref:`.MemcachedBackend.socket_timeout`.
+
+
+.. changelog::
+    :version: 1.1.7
+    :released: Tue Jul 5 2022
+
+    .. change::
+           :tags: usecase, memcached
+           :tickets: 223
+
+           Added :paramref:`.MemcacheArgs.dead_retry` and
+           :paramref:`.MemcacheArgs.socket_timeout` to the dictionary of
+           additional keyword arguments that will be passed
+           directly to ``GenericMemcachedBackend()``.
+
+.. changelog::
+    :version: 1.1.6
+    :released: Fri Jun 10 2022
+
+    .. change::
+        :tags: bug, redis
+        :tickets: 220
+
+        Fixed regression caused by backwards-incompatible API changes in Redis that
+        caused the "distributed lock" feature to not function.
+
+    .. change::
+        :tags: usecase, redis
+        :tickets: 221
+
+        Added :paramref:`.RedisBackend.connection_kwargs` parameter, which is a
+        dictionary of additional keyword arguments that will be passed directly to
+        ``StrictRedis()`` or ``StrictRedis.from_url()``, in the same way that this
+        parameter works with the :class:`.RedisSentinelBackend` already.
+
+.. changelog::
+    :version: 1.1.5
+    :released: Wed Jan 19 2022
+
+    .. change::
+        :tags: usecase, memcached
+
+        Added support for additional pymemcache ``HashClient`` parameters
+        ``retry_attempts``, ``retry_timeout``, and
+        ``dead_timeout``.
+
+        .. seealso::
+
+            :paramref:`.PyMemcacheBackend.hashclient_retry_attempts`
+
+            :paramref:`.PyMemcacheBackend.hashclient_retry_timeout`
+
+            :paramref:`.PyMemcacheBackend.dead_timeout`
+
+.. changelog::
     :version: 1.1.4
     :released: Thu Sep 2 2021
 

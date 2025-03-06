@@ -16,7 +16,6 @@ Build-Depends-Indep:
  python3-coverage,
  python3-decorator,
  python3-mako,
- python3-mock,
  python3-pytest,
  python3-sphinx-paramlinks,
  python3-stevedore,
