@@ -5,7 +5,6 @@ import io
 import itertools
 import time
 from unittest import mock
-from unittest import TestCase
 
 from dogpile.cache import CacheRegion
 from dogpile.cache import exception
@@ -19,22 +18,22 @@ from dogpile.cache.proxy import ProxyBackend
 from dogpile.cache.region import _backend_loader
 from dogpile.cache.region import RegionInvalidationStrategy
 from dogpile.cache.region import value_version
-from . import assert_raises_message
-from . import eq_
-from . import is_
-from ._fixtures import MockBackend
+from dogpile.testing import assert_raises_message
+from dogpile.testing import eq_
+from dogpile.testing import is_
+from dogpile.testing.fixtures import MockBackend
 
 
 def key_mangler(key):
     return "HI!" + key
 
 
-class APITest(TestCase):
+class APITest:
     def test_no_value_str(self):
-        eq_(str(NO_VALUE), "<dogpile.cache.api.NoValue object>")
+        eq_(str(NO_VALUE), "NoValue.NO_VALUE")
 
 
-class RegionTest(TestCase):
+class RegionTest:
     def _region(self, init_args={}, config_args={}, backend="mock"):
         reg = CacheRegion(**init_args)
         reg.configure(backend, **config_args)
@@ -534,6 +533,40 @@ class RegionTest(TestCase):
         eq_(NO_VALUE, reg.get("key2"))
         eq_(values["key3"], reg.get("key3"))
 
+    def test_get_value_metadata(self):
+        reg = self._region()
+        with mock.patch("time.time", return_value=100):
+            reg.set("some key", "some value")
+        with mock.patch("time.time", return_value=105):
+            value_metadata = reg.get_value_metadata("some key")
+            eq_(value_metadata.payload, "some value")
+            eq_(value_metadata.cached_time, 100)
+            eq_(value_metadata.age, 5)
+
+    def test_get_value_metadata_no_value(self):
+        reg = self._region()
+        is_(reg.get_value_metadata("some key"), None)
+
+    def test_get_value_metadata_expired(self):
+        reg = self._region()
+        with mock.patch("time.time", return_value=100):
+            reg.set("some key", "some value")
+        with mock.patch("time.time", return_value=105):
+            value_metadata = reg.get_value_metadata("some key", 4)
+            is_(value_metadata, None)
+
+    def test_get_value_metadata_expiration_ignored(self):
+        reg = self._region()
+        with mock.patch("time.time", return_value=100):
+            reg.set("some key", "some value")
+        with mock.patch("time.time", return_value=105):
+            value_metadata = reg.get_value_metadata(
+                "some key", expiration_time=4, ignore_expiration=True
+            )
+            eq_(value_metadata.payload, "some value")
+            eq_(value_metadata.cached_time, 100)
+            eq_(value_metadata.age, 5)
+
 
 class ProxyRegionTest(RegionTest):
 
@@ -606,12 +639,12 @@ class CustomInvalidationStrategyTest(RegionTest):
         return reg
 
 
-class TestProxyValue(object):
+class SomeProxyValue:
     def __init__(self, value):
         self.value = value
 
 
-class MutexAPITest(TestCase):
+class MutexAPITest:
     def test_mutex_non_match(self):
         assert not isinstance(5, CacheMutex)
         assert not isinstance("some string", CacheMutex)
@@ -642,7 +675,7 @@ class MutexAPITest(TestCase):
         assert isinstance(Foo(), CacheMutex)
 
 
-class AsyncCreatorTest(TestCase):
+class AsyncCreatorTest:
     def _fixture(self):
         def async_creation_runner(cache, somekey, creator, mutex):
             try:
@@ -728,8 +761,15 @@ class AsyncCreatorTest(TestCase):
         def go(x, **kw):
             return x
 
-        test_value = TestProxyValue("Decorator Test")
-        self.assertRaises(ValueError, go, x=1, foo=test_value)
+        test_value = SomeProxyValue("Decorator Test")
+        assert_raises_message(
+            ValueError,
+            "dogpile.cache's default key creation function does not "
+            "accept keyword arguments.",
+            go,
+            x=1,
+            foo=test_value,
+        )
 
         @reg.cache_on_arguments()
         def go2(x):
@@ -737,10 +777,10 @@ class AsyncCreatorTest(TestCase):
 
         # keywords that match positional names can be passed
         result = go2(x=test_value)
-        self.assertTrue(isinstance(result, TestProxyValue))
+        is_(isinstance(result, SomeProxyValue), True)
 
 
-class ProxyBackendTest(TestCase):
+class ProxyBackendTest:
     class GetCounterProxy(ProxyBackend):
         counter = 0
 
@@ -906,7 +946,7 @@ class ProxyBackendTest(TestCase):
         assert isinstance(reg.actual_backend, CacheBackend)
 
 
-class LoggingTest(TestCase):
+class LoggingTest:
     def _region(self, init_args={}, config_args={}, backend="mock"):
         reg = CacheRegion(**init_args)
         reg.configure(backend, **config_args)
@@ -941,7 +981,6 @@ class LoggingTest(TestCase):
         )
 
     def test_repr_obj_truncated(self):
-
         eq_(
             repr(util.repr_obj(["some_big_long_name" for i in range(200)])),
             "['some_big_long_name', 'some_big_long_name', "
@@ -964,7 +1003,6 @@ class LoggingTest(TestCase):
         )
 
     def test_log_is_value_version_miss(self):
-
         reg = self._region()
         inv = mock.Mock(is_hard_invalidated=lambda val: True)
         with mock.patch(
@@ -989,7 +1027,6 @@ class LoggingTest(TestCase):
         )
 
     def test_log_is_hard_invalidated(self):
-
         reg = self._region()
         inv = mock.Mock(is_hard_invalidated=lambda val: True)
         with mock.patch(

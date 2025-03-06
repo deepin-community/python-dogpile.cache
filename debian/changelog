@@ -1,3 +1,48 @@
+python-dogpile.cache (1.3.3-1) unstable; urgency=medium
+
+  * Switch to pybuild (Closes: #1090492).
+
+ -- Thomas Goirand <zigo@debian.org>  Thu, 19 Dec 2024 11:04:24 +0100
+
+python-dogpile.cache (1.3.1-1) unstable; urgency=medium
+
+  * Removed python3-mock from build-depends (Closes: #1069916).
+  * New upstream release.
+  * Rebased remove-non-deterministic-tests.patch.
+
+ -- Thomas Goirand <zigo@debian.org>  Mon, 29 Apr 2024 08:13:10 +0200
+
+python-dogpile.cache (1.1.8-3) unstable; urgency=medium
+
+  * Cleans better (Closes: #1047161).
+
+ -- Thomas Goirand <zigo@debian.org>  Mon, 21 Aug 2023 10:19:11 +0200
+
+python-dogpile.cache (1.1.8-2) unstable; urgency=medium
+
+  * Uploading to unstable.
+
+ -- Thomas Goirand <zigo@debian.org>  Fri, 23 Sep 2022 12:57:40 +0200
+
+python-dogpile.cache (1.1.8-1) experimental; urgency=medium
+
+  * New upstream release.
+  * Add autopkgtest.
+
+ -- Thomas Goirand <zigo@debian.org>  Tue, 30 Aug 2022 13:48:20 +0200
+
+python-dogpile.cache (1.1.5-2) unstable; urgency=medium
+
+  * Uploading to unstable.
+
+ -- Thomas Goirand <zigo@debian.org>  Thu, 24 Mar 2022 11:32:59 +0100
+
+python-dogpile.cache (1.1.5-1) experimental; urgency=medium
+
+  * New upstream release.
+
+ -- Thomas Goirand <zigo@debian.org>  Mon, 21 Feb 2022 10:32:55 +0100
+
 python-dogpile.cache (1.1.4-2) unstable; urgency=medium
 
   * Uploading to unstable.

@@ -1,0 +1,10 @@
+#!/bin/sh
+
+set -e
+set -x
+
+CWD=$(pwd)
+PYTHON3S=$(py3versions -vs)
+for i in ${PYTHON3S} ; do
+	PYTHONPATH=. python$i -m pytest
+done
